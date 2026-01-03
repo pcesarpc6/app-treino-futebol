@@ -2,10 +2,19 @@
 
 import { Logo } from "@/components/custom/logo";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Target, TrendingUp, Users, Zap, Star, Quote } from "lucide-react";
+import { ArrowRight, Target, TrendingUp, Users, Zap, Star, Quote, Play, Dumbbell, Clock } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { ExerciseCard } from "@/components/custom/exercise-card";
+import { generateWorkout } from "@/lib/api/exercise-service";
+import { Exercise } from "@/lib/types/exercise";
 
 export default function Home() {
+  const [selectedFocus, setSelectedFocus] = useState<string>('velocidade');
+  const [selectedLevel, setSelectedLevel] = useState<Exercise['difficulty']>('intermediário');
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [loading, setLoading] = useState(false);
+
   const testimonials = [
     {
       name: "Lucas Mendes",
@@ -51,6 +60,18 @@ export default function Home() {
     }
   ];
 
+  const handleGenerateWorkout = async () => {
+    setLoading(true);
+    try {
+      const workout = await generateWorkout(selectedFocus, selectedLevel);
+      setExercises(workout);
+    } catch (error) {
+      console.error('Erro ao gerar treino:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen futpower-gradient">
       {/* Header */}
@@ -92,14 +113,15 @@ export default function Home() {
               size="lg" 
               variant="outline"
               className="bg-transparent border-2 border-white text-white hover:bg-white/10 font-bold text-lg px-8 py-6 rounded-xl"
+              onClick={() => document.getElementById('treinos')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              Saber Mais
+              Ver Treinos
             </Button>
           </div>
         </div>
       </section>
 
-      {/* Testimonials Section - NOVA SEÇÃO */}
+      {/* Testimonials Section */}
       <section className="container mx-auto px-4 py-12 md:py-20">
         <div className="text-center mb-12">
           <div className="inline-block mb-4 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-[#FFD700]/30">
@@ -171,6 +193,115 @@ export default function Home() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Workout Generator Section - NOVA SEÇÃO */}
+      <section id="treinos" className="container mx-auto px-4 py-12 md:py-20">
+        <div className="text-center mb-12">
+          <div className="inline-block mb-4 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-[#4ADE80]/30">
+            <span className="text-white font-semibold text-sm">
+              🎯 Treinos Personalizados com IA
+            </span>
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
+            Experimente um treino
+            <br />
+            <span className="futpower-text-gradient">personalizado agora!</span>
+          </h2>
+          <p className="text-lg text-[#A8D5BA] max-w-2xl mx-auto">
+            Selecione seu foco e nível para gerar um treino completo com vídeos demonstrativos
+          </p>
+        </div>
+
+        {/* Workout Configuration */}
+        <div className="max-w-4xl mx-auto mb-8">
+          <div className="futpower-card rounded-2xl p-6 md:p-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              {/* Foco do Treino */}
+              <div>
+                <label className="block text-sm font-semibold text-[#1A4D2E] mb-3">
+                  <Target className="inline mr-2" size={16} />
+                  Foco do Treino:
+                </label>
+                <div className="grid grid-cols-1 gap-2">
+                  {['velocidade', 'força', 'resistência'].map((focus) => (
+                    <button
+                      key={focus}
+                      onClick={() => setSelectedFocus(focus)}
+                      className={`p-3 rounded-lg border-2 transition-all ${
+                        selectedFocus === focus
+                          ? 'border-[#4ADE80] bg-[#4ADE80]/10 text-[#1A4D2E] font-bold'
+                          : 'border-gray-300 hover:border-[#4ADE80]/50'
+                      }`}
+                    >
+                      {focus.charAt(0).toUpperCase() + focus.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Nível */}
+              <div>
+                <label className="block text-sm font-semibold text-[#1A4D2E] mb-3">
+                  <Dumbbell className="inline mr-2" size={16} />
+                  Seu Nível:
+                </label>
+                <div className="grid grid-cols-1 gap-2">
+                  {(['iniciante', 'intermediário', 'avançado'] as Exercise['difficulty'][]).map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => setSelectedLevel(level)}
+                      className={`p-3 rounded-lg border-2 transition-all ${
+                        selectedLevel === level
+                          ? 'border-[#FFD700] bg-[#FFD700]/10 text-[#1A4D2E] font-bold'
+                          : 'border-gray-300 hover:border-[#FFD700]/50'
+                      }`}
+                    >
+                      {level.charAt(0).toUpperCase() + level.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <Button
+              onClick={handleGenerateWorkout}
+              disabled={loading}
+              className="w-full futpower-button-primary text-lg py-6 rounded-xl hover:scale-105 transition-all duration-300"
+            >
+              {loading ? (
+                <>
+                  <Clock className="mr-2 animate-spin" size={20} />
+                  Gerando seu treino...
+                </>
+              ) : (
+                <>
+                  <Play className="mr-2" size={20} />
+                  Gerar Treino Personalizado
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Exercise Cards */}
+        {exercises.length > 0 && (
+          <div className="max-w-6xl mx-auto">
+            <div className="mb-6 text-center">
+              <h3 className="text-2xl font-bold text-white mb-2">
+                Seu Treino de {selectedFocus.charAt(0).toUpperCase() + selectedFocus.slice(1)}
+              </h3>
+              <p className="text-[#A8D5BA]">
+                {exercises.length} exercícios • Nível {selectedLevel} • ~45 minutos
+              </p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {exercises.map((exercise) => (
+                <ExerciseCard key={exercise.id} exercise={exercise} />
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Features Section */}
